@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendrier de Garde Partagée</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f2f5;
+            padding: 20px;
+        }
+        .container {
+            max-width: calc(100% - 5%);
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 30px;
+            font-size: 2.2em;
+        }
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 30px;
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+        }
+        .controls-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+            align-items: center;
+        }
+        .controls-row label {
+            font-weight: 600;
+            color: #34495e;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .controls-row input, .controls-row select {
+            padding: 8px 12px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .controls button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .controls button:hover {
+            background: #2980b9;
+        }
+        .view-btn {
+            background: #9b59b6;
+        }
+        .view-btn:hover {
+            background: #8e44ad;
+        }
+        .view-btn.active {
+            background: #2c3e50;
+        }
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 500;
+            font-size: 0.9em;
+        }
+        .color-box {
+            width: 25px;
+            height: 25px;
+            border-radius: 4px;
+            border: 2px solid #333;
+        }
+        .color-box-split {
+            width: 25px;
+            height: 25px;
+            border-radius: 4px;
+            border: 2px solid #333;
+            background: linear-gradient(135deg, #e74c3c 50%, #2ecc71 50%);
+        }
+        .color-box-split-reverse {
+            width: 25px;
+            height: 25px;
+            border-radius: 4px;
+            border: 2px solid #333;
+            background: linear-gradient(135deg, #2ecc71 50%, #e74c3c 50%);
+        }
+
+        /* Vue mensuelle */
+        .monthly-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 3px;
+            margin-top: 20px;
+        }
+        .monthly-grid .calendar-header {
+            background: #2c3e50;
+            color: white;
+            padding: 12px;
+            text-align: center;
+            font-weight: 700;
+            border-radius: 6px;
+        }
+        .monthly-grid .day-cell {
+            background: #ecf0f1;
+            padding: 8px 4px;
+            min-height: 90px;
+            text-align: center;
+            border-radius: 6px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            transition: transform 0.2s;
+            border: 2px solid transparent;
+            position: relative;
+        }
+        .monthly-grid .day-cell:hover {
+            transform: scale(1.02);
+            z-index: 2;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        .monthly-grid .day-number {
+            font-weight: 700;
+            font-size: 1.1em;
+            margin-bottom: 4px;
+        }
+        .monthly-grid .parent-label {
+            font-size: 0.7em;
+            padding: 3px 6px;
+            border-radius: 12px;
+            font-weight: 600;
+            color: white;
+            margin-top: 2px;
+            width: 100%;
+            text-align: center;
+        }
+        .monthly-grid .time-info {
+            font-size: 0.6em;
+            color: #555;
+            margin-top: 2px;
+            background: rgba(255,255,255,0.8);
+            padding: 2px 6px;
+            border-radius: 10px;
+            width: 100%;
+        }
+        .monthly-grid .empty-cell {
+            background: transparent;
+            min-height: 90px;
+            border-radius: 6px;
+        }
+        .monthly-grid .month-label {
+            grid-column: span 7;
+            text-align: center;
+            font-weight: 700;
+            font-size: 1.3em;
+            color: #2c3e50;
+            padding: 12px 0;
+            background: #f8f9fa;
+            border-radius: 6px;
+            margin: 5px 0;
+        }
+
+        /* Classes de couleurs */
+        .parent1 { background: #e74c3c; border-color: #c0392b; }
+        .parent2 { background: #2ecc71; border-color: #27ae60; }
+        .parent-split {
+            background: linear-gradient(135deg, #e74c3c 50%, #2ecc71 50%);
+            border-color: #f39c12;
+            color: white;
+        }
+        .parent-split-reverse {
+            background: linear-gradient(135deg, #2ecc71 50%, #e74c3c 50%);
+            border-color: #f39c12;
+            color: white;
+        }
+        .weekend { background: #fdf2e9; }
+
+        /* Vue annuelle */
+        .annual-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .annual-month {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            overflow: hidden;
+            background: white;
+        }
+        .annual-month-header {
+            background: #2c3e50;
+            color: white;
+            text-align: center;
+            font-weight: 700;
+            font-size: 0.75em;
+            padding: 4px 0;
+            letter-spacing: 0.5px;
+        }
+        .annual-weekdays {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            background: #34495e;
+            color: white;
+            font-size: 0.5em;
+            font-weight: 600;
+            text-align: center;
+            padding: 2px 0;
+        }
+        .annual-days {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 1px;
+            background: #ecf0f1;
+        }
+        .annual-day {
+            background: white;
+            text-align: center;
+            padding: 2px 0;
+            font-size: 0.6em;
+            min-height: 22px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #f0f0f0;
+        }
+        .annual-day .day-num {
+            font-weight: 600;
+            font-size: 0.75em;
+            line-height: 1.2;
+        }
+        .annual-day .day-parent {
+            font-size: 0.55em;
+            padding: 0 2px;
+            border-radius: 2px;
+            font-weight: 600;
+            color: white;
+            width: 100%;
+            line-height: 1.3;
+        }
+        .annual-day .day-time {
+            font-size: 0.45em;
+            color: #666;
+            line-height: 1;
+        }
+        .annual-day.empty {
+            background: transparent;
+            border: none;
+        }
+        .annual-day.weekend {
+            background: #fdf2e9;
+        }
+        .annual-day .parent1 { background: #e74c3c; }
+        .annual-day .parent2 { background: #2ecc71; }
+        .annual-day .parent-split {
+            background: linear-gradient(135deg, #e74c3c 50%, #2ecc71 50%);
+            color: white;
+        }
+        .annual-day .parent-split-reverse {
+            background: linear-gradient(135deg, #2ecc71 50%, #e74c3c 50%);
+            color: white;
+        }
+
+        .print-btn {
+            background: #27ae60;
+            margin-left: 10px;
+        }
+        .print-btn:hover {
+            background: #1e8449;
+        }
+        .name-input {
+            width: 140px !important;
+        }
+
+        @media print {
+            body { background: white; padding: 5px; margin: 0; }
+            .container {
+                box-shadow: none;
+                padding: 5px;
+                max-width: 100% !important;
+                margin: 0;
+            }
+            .controls { display: none; }
+            .print-btn { display: none; }
+            .legend { margin: 8px 0; gap: 12px; }
+            .legend-item { font-size: 0.6em; }
+            .color-box { width: 14px; height: 14px; }
+            .color-box-split { width: 14px; height: 14px; }
+            .color-box-split-reverse { width: 14px; height: 14px; }
+            h1 { font-size: 1.2em !important; margin-bottom: 8px !important; }
+
+            .annual-grid { gap: 4px; }
+            .annual-month-header { font-size: 0.5em; padding: 2px 0; }
+            .annual-weekdays { font-size: 0.35em; }
+            .annual-day { min-height: 12px; font-size: 0.4em; padding: 0; }
+            .annual-day .day-num { font-size: 0.5em; }
+            .annual-day .day-parent { font-size: 0.4em; padding: 0 1px; }
+            .annual-day .day-time { font-size: 0.3em; }
+
+            .annual-day .parent1 { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .annual-day .parent2 { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .annual-day .parent-split { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .annual-day .parent-split-reverse { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .annual-day.weekend { background: #f9f9f9 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .monthly-grid .day-cell { border: 1px solid #ddd !important; }
+            .monthly-grid .calendar-header { background: #333 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .monthly-grid .parent1 { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .monthly-grid .parent2 { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .monthly-grid .parent-split { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .monthly-grid .parent-split-reverse { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .monthly-grid .weekend { background: #f9f9f9 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        }
+        @media (max-width: 900px) {
+            .annual-grid { grid-template-columns: repeat(2, 1fr); }
+            .container { max-width: calc(100% - 3%); padding: 20px; }
+        }
+        @media (max-width: 500px) {
+            .annual-grid { grid-template-columns: 1fr; }
+            .container { max-width: calc(100% - 2%); padding: 15px; }
+        }
+        @media (max-width: 700px) {
+            .monthly-grid .day-cell { min-height: 70px; padding: 6px 2px; }
+            .monthly-grid .day-number { font-size: 0.9em; }
+            .monthly-grid .parent-label { font-size: 0.6em; padding: 2px 4px; }
+            .monthly-grid .time-info { font-size: 0.5em; }
+            .name-input { width: 100px !important; }
+            .controls-row { gap: 10px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container" id="calendarContainer">
+        <h1>📅 Calendrier de Garde Partagée</h1>
+
+        <div class="controls">
+            <div class="controls-row">
+                <label>📆 Année :
+                    <input type="number" id="yearInput" value="2027" min="2020" max="2035">
+                </label>
+                <label>📌 Jour de départ :
+                    <select id="startDayInput">
+                        <option value="0">Dimanche</option>
+                        <option value="1">Lundi</option>
+                        <option value="2">Mardi</option>
+                        <option value="3">Mercredi</option>
+                        <option value="4">Jeudi</option>
+                        <option value="5" selected>Vendredi</option>
+                        <option value="6">Samedi</option>
+                    </select>
+                </label>
+                <label>🔄 Type de garde :
+                    <select id="scheduleType">
+                        <option value="7-7">7/7</option>
+                        <option value="5-2-2-5">5-2-2-5</option>
+                        <option value="3-2-2-3">3-2-2-3</option>
+                    </select>
+                </label>
+                <label>⏰ Heure de bascule :
+                    <input type="time" id="switchTime" value="16:30">
+                </label>
+            </div>
+
+            <div class="controls-row">
+                <label>👨 Parent 1 :
+                    <input type="text" id="parent1Name" class="name-input" value="Marc" placeholder="Nom P1">
+                </label>
+                <label>👩 Parent 2 :
+                    <input type="text" id="parent2Name" class="name-input" value="Hakima" placeholder="Nom P2">
+                </label>
+                <button onclick="generateCalendar()">Générer</button>
+                <button class="view-btn active" id="monthlyViewBtn" onclick="setView('monthly')">📅 Vue mensuelle</button>
+                <button class="view-btn" id="annualViewBtn" onclick="setView('annual')">📆 Vue annuelle</button>
+                <button class="print-btn" onclick="window.print()">🖨️ Imprimer</button>
+            </div>
+        </div>
+
+        <div class="legend">
+            <div class="legend-item">
+                <div class="color-box" style="background:#e74c3c;"></div>
+                <span id="legendParent1">Marc (journée)</span>
+            </div>
+            <div class="legend-item">
+                <div class="color-box" style="background:#2ecc71;"></div>
+                <span id="legendParent2">Hakima (journée)</span>
+            </div>
+            <div class="legend-item">
+                <div class="color-box-split"></div>
+                <span id="legendSplit1">Marc → Hakima</span>
+            </div>
+            <div class="legend-item">
+                <div class="color-box-split-reverse"></div>
+                <span id="legendSplit2">Hakima → Marc</span>
+            </div>
+        </div>
+
+        <div id="calendarDisplay"></div>
+    </div>
+
+    <script>
+        let currentView = 'monthly';
+
+        function daysInMonth(m, y) {
+            return new Date(y, m + 1, 0).getDate();
+        }
+
+        function getParent(dayOfYear, scheduleType) {
+            let adjustedDay = dayOfYear - 1;
+
+            if (scheduleType === '7-7') {
+                const cycle = Math.floor(adjustedDay / 7) % 2;
+                return cycle === 0 ? 'Parent 1' : 'Parent 2';
+            }
+            else if (scheduleType === '5-2-2-5') {
+                const cycle = adjustedDay % 14;
+                if (cycle < 5 || cycle >= 12) return 'Parent 1';
+                else return 'Parent 2';
+            }
+            else if (scheduleType === '3-2-2-3') {
+                const cycle = adjustedDay % 10;
+                if (cycle < 3 || (cycle >= 5 && cycle < 7)) return 'Parent 1';
+                else return 'Parent 2';
+            }
+            return 'Parent 1';
+        }
+
+        function isWeekday(date) {
+            const day = date.getDay();
+            return day !== 0 && day !== 6;
+        }
+
+        function isTransitionDay(dayOfYear, scheduleType) {
+            if (dayOfYear === 1) return true;
+            const currentParent = getParent(dayOfYear, scheduleType);
+            const previousParent = getParent(dayOfYear - 1, scheduleType);
+            return currentParent !== previousParent;
+        }
+
+        function setView(view) {
+            currentView = view;
+            document.getElementById('monthlyViewBtn').classList.toggle('active', view === 'monthly');
+            document.getElementById('annualViewBtn').classList.toggle('active', view === 'annual');
+            generateCalendar();
+        }
+
+        function generateCalendar() {
+            const year = parseInt(document.getElementById('yearInput').value);
+            const startDay = parseInt(document.getElementById('startDayInput').value);
+            const scheduleType = document.getElementById('scheduleType').value;
+            const switchTime = document.getElementById('switchTime').value;
+            const parent1Name = document.getElementById('parent1Name').value || 'Parent 1';
+            const parent2Name = document.getElementById('parent2Name').value || 'Parent 2';
+
+            document.getElementById('legendParent1').textContent = `${parent1Name} (journée)`;
+            document.getElementById('legendParent2').textContent = `${parent2Name} (journée)`;
+            document.getElementById('legendSplit1').textContent = `${parent1Name} → ${parent2Name}`;
+            document.getElementById('legendSplit2').textContent = `${parent2Name} → ${parent1Name}`;
+
+            const months = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+                           'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+            const days = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+            const daysShort = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
+
+            if (currentView === 'monthly') {
+                generateMonthlyView(year, startDay, scheduleType, switchTime, parent1Name, parent2Name, months, days);
+            } else {
+                generateAnnualView(year, startDay, scheduleType, switchTime, parent1Name, parent2Name, months, daysShort);
+            }
+        }
+
+        function generateMonthlyView(year, startDay, scheduleType, switchTime, parent1Name, parent2Name, months, days) {
+            let html = '<div class="monthly-grid">';
+
+            for (let i = 0; i < 7; i++) {
+                const dayIndex = (startDay + i) % 7;
+                html += `<div class="calendar-header">${days[dayIndex]}</div>`;
+            }
+
+            let dayOfYear = 1;
+
+            for (let month = 0; month < 12; month++) {
+                const daysInM = daysInMonth(month, year);
+                const firstDayOfMonth = new Date(year, month, 1).getDay();
+                let startOffset = (firstDayOfMonth - startDay + 7) % 7;
+
+                html += `<div class="month-label">${months[month]} ${year}</div>`;
+
+                for (let i = 0; i < startOffset; i++) {
+                    html += `<div class="empty-cell"></div>`;
+                }
+
+                for (let day = 1; day <= daysInM; day++) {
+                    const date = new Date(year, month, day);
+                    const dayOfWeek = date.getDay();
+                    const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+
+                    const mainParent = getParent(dayOfYear, scheduleType);
+                    const isWeekDay = isWeekday(date);
+                    const isTransition = isTransitionDay(dayOfYear, scheduleType);
+                    const isFirstDay = (dayOfYear === 1);
+
+                    let parentClass = '';
+                    let displayText = '';
+                    let timeText = '';
+
+                    if (isWeekDay && isTransition && switchTime) {
+                        if (mainParent === 'Parent 1') {
+                            if (isFirstDay) {
+                                // Premier jour : le parent qui termine (Parent 2) → celui qui commence (Parent 1)
+                                parentClass = 'parent-split-reverse';
+                                displayText = `${parent2Name} → ${parent1Name}`;
+                                timeText = `jusqu'à ${switchTime}`;
+                            } else {
+                                // Transition normale : Parent 1 → Parent 2
+                                parentClass = 'parent-split';
+                                displayText = `${parent1Name} → ${parent2Name}`;
+                                timeText = `jusqu'à ${switchTime}`;
+                            }
+                        } else {
+                            if (isFirstDay) {
+                                // Premier jour : le parent qui termine (Parent 1) → celui qui commence (Parent 2)
+                                parentClass = 'parent-split';
+                                displayText = `${parent1Name} → ${parent2Name}`;
+                                timeText = `jusqu'à ${switchTime}`;
+                            } else {
+                                // Transition normale : Parent 2 → Parent 1
+                                parentClass = 'parent-split-reverse';
+                                displayText = `${parent2Name} → ${parent1Name}`;
+                                timeText = `jusqu'à ${switchTime}`;
+                            }
+                        }
+                    } else {
+                        // Garde complète
+                        parentClass = mainParent === 'Parent 1' ? 'parent1' : 'parent2';
+                        displayText = mainParent === 'Parent 1' ? parent1Name : parent2Name;
+                        timeText = 'journée';
+                    }
+
+                    const weekendClass = isWeekend ? 'weekend' : '';
+
+                    html += `<div class="day-cell ${weekendClass}">`;
+                    html += `<div class="day-number">${day}</div>`;
+                    html += `<div class="parent-label ${parentClass}">${displayText}</div>`;
+                    html += `<div class="time-info">${timeText}</div>`;
+                    html += `</div>`;
+
+                    dayOfYear++;
+                }
+            }
+
+            html += '</div>';
+            document.getElementById('calendarDisplay').innerHTML = html;
+        }
+
+        function generateAnnualView(year, startDay, scheduleType, switchTime, parent1Name, parent2Name, months, daysShort) {
+            let html = '<div class="annual-grid">';
+
+            let dayOfYear = 1;
+
+            for (let month = 0; month < 12; month++) {
+                const daysInM = daysInMonth(month, year);
+                const firstDayOfMonth = new Date(year, month, 1).getDay();
+                let startOffset = (firstDayOfMonth - startDay + 7) % 7;
+
+                html += `<div class="annual-month">`;
+                html += `<div class="annual-month-header">${months[month]} ${year}</div>`;
+
+                html += `<div class="annual-weekdays">`;
+                for (let i = 0; i < 7; i++) {
+                    const dayIndex = (startDay + i) % 7;
+                    html += `<span>${daysShort[dayIndex]}</span>`;
+                }
+                html += `</div>`;
+
+                html += `<div class="annual-days">`;
+
+                for (let i = 0; i < startOffset; i++) {
+                    html += `<div class="annual-day empty"></div>`;
+                }
+
+                for (let day = 1; day <= daysInM; day++) {
+                    const date = new Date(year, month, day);
+                    const dayOfWeek = date.getDay();
+                    const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+
+                    const mainParent = getParent(dayOfYear, scheduleType);
+                    const isWeekDay = isWeekday(date);
+                    const isTransition = isTransitionDay(dayOfYear, scheduleType);
+                    const isFirstDay = (dayOfYear === 1);
+
+                    let parentClass = '';
+                    let displayText = '';
+                    let timeText = '';
+
+                    if (isWeekDay && isTransition && switchTime) {
+                        if (mainParent === 'Parent 1') {
+                            if (isFirstDay) {
+                                parentClass = 'parent-split-reverse';
+                                displayText = 'P2→P1';
+                                timeText = switchTime;
+                            } else {
+                                parentClass = 'parent-split';
+                                displayText = 'P1→P2';
+                                timeText = switchTime;
+                            }
+                        } else {
+                            if (isFirstDay) {
+                                parentClass = 'parent-split';
+                                displayText = 'P1→P2';
+                                timeText = switchTime;
+                            } else {
+                                parentClass = 'parent-split-reverse';
+                                displayText = 'P2→P1';
+                                timeText = switchTime;
+                            }
+                        }
+                    } else {
+                        parentClass = mainParent === 'Parent 1' ? 'parent1' : 'parent2';
+                        displayText = mainParent === 'Parent 1' ? 'P1' : 'P2';
+                        timeText = '';
+                    }
+
+                    const weekendClass = isWeekend ? 'weekend' : '';
+
+                    html += `<div class="annual-day ${weekendClass}">`;
+                    html += `<div class="day-num">${day}</div>`;
+                    html += `<div class="day-parent ${parentClass}">${displayText}</div>`;
+                    if (timeText) {
+                        html += `<div class="day-time">${timeText}</div>`;
+                    }
+                    html += `</div>`;
+
+                    dayOfYear++;
+                }
+
+                html += `</div>`;
+                html += `</div>`;
+            }
+
+            html += '</div>';
+            document.getElementById('calendarDisplay').innerHTML = html;
+        }
+
+        window.onload = function() {
+            generateCalendar();
+        };
+    </script>
+</body>
+</html>
